@@ -11,8 +11,10 @@
 #include "cinder/Rand.h"
 #include "Resources.h"
 #include "Room.h"
-#include "SpringCam.h"
+#include "HeadCam.h"
 #include "Controller.h"
+#include "OscListener.h"
+#include "OscMessage.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -20,6 +22,9 @@ using namespace std;
 
 #define APP_WIDTH		1280
 #define APP_HEIGHT		720
+#define ROOM_WIDTH		600
+#define ROOM_HEIGHT		400
+#define ROOM_DEPTH		600
 #define ROOM_FBO_RES	2
 
 class BubbleChamberApp : public AppBasic {
@@ -35,10 +40,15 @@ class BubbleChamberApp : public AppBasic {
 	virtual void	update();
 	void			drawIntoRoomFbo();
 	virtual void	draw();
+	void			drawGuts(Area area);
 	void			drawInfoPanel();
+	void			checkOSCMessage(const osc::Message * message);
+	void			setCameras(Vec3f headPosition, bool fromKeyboard);
 	
 	// CAMERA
-	SpringCam			mSpringCam;
+	HeadCam			mActiveCam;
+	HeadCam			mHeadCam0;
+	HeadCam			mHeadCam1;
 	
 	// SHADERS
 	gl::GlslProg		mRoomShader;
@@ -65,6 +75,60 @@ class BubbleChamberApp : public AppBasic {
 	bool				mSaveFrames;
 };
 
+void BubbleChamberApp::setCameras(Vec3f headPosition, bool fromKeyboard = false){
+	// Separate out the components	
+	float headX = headPosition.x;
+	float headY = headPosition.y;
+	float headZ = headPosition.z;
+	
+	// Adjust these away from the wonky coordinates we get from the Kinect,
+	//  then normalize them so that they're in units of 100px per foot
+
+	if (!fromKeyboard){
+	//3.28 feet in a meter
+		headX = headX * 3.28f * 100;
+		headY = headY * 3.28f * 100 - ( ROOM_HEIGHT / 3 ); // Offset to bring up the vertical position of the eye
+		headZ = headZ * 3.28f * 100;
+	}
+	
+	// Make sure that the cameras are located somewhere in front of the screens
+	//  Orientation is   X
+	//                   |        ------> Screen 2 x axis
+	//                   |   ------ Screen 2
+	//                   |   |
+	//                   |   |
+	//         Z----<----|---o < Screen 1, o is the origin
+	//                   |   | 
+	//                   v   |
+
+	//console() << "headX: " << headX << std::endl;
+	//console() << "headZ: " << headZ << std::endl;
+
+	if (headZ > ROOM_DEPTH / 2){
+		mHeadCam0.setEye(Vec3f(headX, headY, headZ));
+	}
+	else{
+		mHeadCam0.mEye = Vec3f(0,0,1200);
+	}
+	if (headX < -ROOM_WIDTH / 2){
+		// headZ is negative here since that axis is backwards on Screen 2
+		mHeadCam1.setEye(Vec3f(headX, headY, headZ));
+	}
+	else{
+		mHeadCam1.mEye = Vec3f(-1200,0,0);
+	}
+}
+
+void BubbleChamberApp::checkOSCMessage(const osc::Message * message){
+	// Sanity check that we have our legit head message
+	if (message->getAddress() == "/head" && message->getNumArgs() == 3){
+		float headX = message->getArgAsFloat(0);
+		float headY = message->getArgAsFloat(1);
+		float headZ = message->getArgAsFloat(2);
+
+		setCameras(Vec3f(headX, headY, headZ), false);
+	}
+
 void BubbleChamberApp::prepareSettings( Settings *settings )
 {
 	settings->setWindowSize( APP_WIDTH, APP_HEIGHT );
@@ -74,12 +138,12 @@ void BubbleChamberApp::prepareSettings( Settings *settings )
 void BubbleChamberApp::setup()
 {
 	// CAMERA	
-	mSpringCam		= SpringCam( -450.0f, getWindowAspectRatio() );
+	mActiveCam		= HeadCam( -450.0f, getWindowAspectRatio() );
 
 	// LOAD SHADERS
 	try {
-		mRoomShader		= gl::GlslProg( loadResource( "room.vert" ), loadResource( "room.frag" ) );
-		mGlowCubeShader	= gl::GlslProg( loadResource( "glowCube.vert" ), loadResource( "glowCube.frag" ) );
+		mRoomShader		= gl::GlslProg( loadResource( RES_ROOM_VERT ), loadResource( RES_ROOM_FRAG ) );
+		mGlowCubeShader	= gl::GlslProg( loadResource( RES_GLOWCUBE_VERT ), loadResource( RES_GLOWCUBE_FRAG ) );
 	} catch( gl::GlslProgCompileExc e ) {
 		std::cout << e.what() << std::endl;
 		quit();
@@ -92,9 +156,9 @@ void BubbleChamberApp::setup()
     mipFmt.setMagFilter( GL_LINEAR );
 	
 	// LOAD TEXTURES
-	mSmokeTex		= gl::Texture( loadImage( loadResource( "smoke.png" ) ) );
-	mDecalTex		= gl::Texture( loadImage( loadResource( "decal.png" ) ) );
-	mIconTex		= gl::Texture( loadImage( loadResource( "iconBubbleChamber.png" ) ), mipFmt );
+	mSmokeTex		= gl::Texture( loadImage( loadResource( RES_SMOKE_PNG ) ) );
+	mDecalTex		= gl::Texture( loadImage( loadResource( RES_DECAL_PNG) ) );
+	mIconTex		= gl::Texture( loadImage( loadResource( RES_ICON_BUBBLE_CHAMBER ) ), mipFmt );
 	
 	// ROOM
 	gl::Fbo::Format roomFormat;
@@ -164,9 +228,9 @@ void BubbleChamberApp::keyDown( KeyEvent event )
 	}
 	
 	switch( event.getCode() ){
-		case KeyEvent::KEY_UP:		mSpringCam.setEye( mRoom.getCornerCeilingPos() );	break;
-		case KeyEvent::KEY_DOWN:	mSpringCam.setEye( mRoom.getCornerFloorPos() );		break;
-		case KeyEvent::KEY_RIGHT:	mSpringCam.resetEye();								break;
+		case KeyEvent::KEY_UP:		mActiveCam.setEye( mRoom.getCornerCeilingPos() );	break;
+		case KeyEvent::KEY_DOWN:	mActiveCam.setEye( mRoom.getCornerFloorPos() );		break;
+		case KeyEvent::KEY_RIGHT:	mActiveCam.resetEye();								break;
 		default: break;
 	}
 }
@@ -178,8 +242,8 @@ void BubbleChamberApp::update()
 	
 	// CAMERA
 	if( mMousePressed )
-		mSpringCam.dragCam( ( mMouseOffset ) * 0.02f, ( mMouseOffset ).length() * 0.02 );
-	mSpringCam.update( 0.3f );
+		mActiveCam.dragCam( ( mMouseOffset ) * 0.02f, ( mMouseOffset ).length() * 0.02 );
+	mActiveCam.update( 0.3f );
 
 	// CONTROLLER
 	mController.update();
@@ -203,9 +267,9 @@ void BubbleChamberApp::drawIntoRoomFbo()
 	m.scale( mRoom.getDims() );
 
 	mRoomShader.bind();
-	mRoomShader.uniform( "mvpMatrix", mSpringCam.mMvpMatrix );
+	mRoomShader.uniform( "mvpMatrix", mActiveCam.mMvpMatrix );
 	mRoomShader.uniform( "mMatrix", m );
-	mRoomShader.uniform( "eyePos", mSpringCam.mCam.getEyePoint() );
+	mRoomShader.uniform( "eyePos", mActiveCam.mCam.getEyePoint() );
 	mRoomShader.uniform( "roomDims", mRoom.getDims() );
 	mRoomShader.uniform( "power", mRoom.getPower() );
 	mRoomShader.uniform( "lightPower", mRoom.getLightPower() );
@@ -218,6 +282,22 @@ void BubbleChamberApp::drawIntoRoomFbo()
 }
 
 void BubbleChamberApp::draw()
+{
+		Area mViewArea0 = Area(0, 0, getWindowSize().x / 2,getWindowSize().y);
+	Area mViewArea1 = Area(getWindowSize().x / 2, 0, getWindowSize().x, getWindowSize().y);
+
+	gl::clear( ColorA( 0.1f, 0.1f, 0.1f, 0.0f ), true );
+
+	
+
+	mActiveCam = mActiveCam1;
+	drawGuts(mViewArea0);
+
+	mActiveCam = mActiveCam0;
+	drawGuts(mViewArea1);
+}
+
+void BubbleChamberApp::drawGuts(Area area)
 {
 	float power = mRoom.getPower();
 	Color powerColor = Color( power, power, power );
@@ -237,7 +317,7 @@ void BubbleChamberApp::draw()
 	mRoomFbo.bindTexture();
 	gl::drawSolidRect( getWindowBounds() );
 	
-	gl::setMatrices( mSpringCam.getCam() );
+	gl::setMatrices( mActiveCam.getCam() );
 	
 	// PANEL
 	drawInfoPanel();
@@ -267,7 +347,7 @@ void BubbleChamberApp::draw()
 	
 	// SMOKES
 	Vec3f right, up;
-	mSpringCam.getCam().getBillboardVectors( &right, &up );
+	mActiveCam.getCam().getBillboardVectors( &right, &up );
 	mSmokeTex.bind( 0 );
 	mController.drawSmokes( right, up );
 
@@ -280,14 +360,14 @@ void BubbleChamberApp::draw()
 	
 	// GLOWCUBES
 	mGlowCubeShader.bind();
-	mGlowCubeShader.uniform( "eyePos", mSpringCam.getEye() );
+	mGlowCubeShader.uniform( "eyePos", mActiveCam.getEye() );
 	mGlowCubeShader.uniform( "power", mRoom.getPower() );
-	mGlowCubeShader.uniform( "mvpMatrix", mSpringCam.mMvpMatrix );
+	mGlowCubeShader.uniform( "mvpMatrix", mActiveCam.mMvpMatrix );
 	mController.drawGlowCubes( &mGlowCubeShader );
 	mGlowCubeShader.unbind();
 
 	if( mSaveFrames ){
-		writeImage( getHomeDirectory() + "BubbleChamber/" + toString( mNumSaveFrames ) + ".png", copyWindowSurface() );
+//		writeImage( getHomeDirectory() + "BubbleChamber/" + toString( mNumSaveFrames ) + ".png", copyWindowSurface() );
 		mNumSaveFrames ++;
 	}
 }
