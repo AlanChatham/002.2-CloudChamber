@@ -50,7 +50,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\include";"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\boost";..\blocks\OSC\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\blocks\OSC\src;..\..\cinder_0.8.5_vc2012\boost;..\..\cinder_0.8.5_vc2012\include;..\PutCinderHere\cinder_0.8.5_vc2012\boost;..\PutCinderHere\cinder_0.8.5_vc2012\include;..\PutCinderHere\boost</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0502;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>true</MinimalRebuild>
       <BasicRuntimeChecks>EnableFastChecks</BasicRuntimeChecks>
@@ -61,11 +61,11 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\include";..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\cinder_0.8.5_vc2012\include;..\PutCinderHere\include;..\PutCinderHere\cinder_0.8.5_vc2012\include;..\include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>cinder_d.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\lib";"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\lib\msw"</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\cinder_0.8.5_vc2012\lib;..\..\cinder_0.8.5_vc2012\lib\msw;..\PutCinderHere\cinder_0.8.5_vc2012\lib;..\PutCinderHere\cinder_0.8.5_vc2012\lib\msw;..\PutCinderHere\lib;..\PutCinderHere\msw</AdditionalLibraryDirectories>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <RandomizedBaseAddress>false</RandomizedBaseAddress>
@@ -76,7 +76,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\include;"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\include";"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\boost";..\blocks\OSC\src</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\blocks\OSC\src;..\..\cinder_0.8.5_vc2012\boost;..\..\cinder_0.8.5_vc2012\include;..\PutCinderHere\cinder_0.8.5_vc2012\boost;..\PutCinderHere\cinder_0.8.5_vc2012\include;..\PutCinderHere\boost</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;NOMINMAX;_WIN32_WINNT=0x0502;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <PrecompiledHeader />
@@ -88,11 +88,11 @@
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
     </ProjectReference>
     <ResourceCompile>
-      <AdditionalIncludeDirectories>"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\include";..\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\cinder_0.8.5_vc2012\include;..\PutCinderHere\include;..\PutCinderHere\cinder_0.8.5_vc2012\include;..\include</AdditionalIncludeDirectories>
     </ResourceCompile>
     <Link>
       <AdditionalDependencies>cinder.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\lib";"..\..\..\..\..\Desktop\cinder_0.8.5_vc2012\lib\msw"</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>..\..\cinder_0.8.5_vc2012\lib;..\..\cinder_0.8.5_vc2012\lib\msw;..\PutCinderHere\cinder_0.8.5_vc2012\lib;..\PutCinderHere\cinder_0.8.5_vc2012\lib\msw;..\PutCinderHere\lib;..\PutCinderHere\msw</AdditionalLibraryDirectories>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <GenerateMapFile>true</GenerateMapFile>
       <SubSystem>Windows</SubSystem>
@@ -122,12 +122,12 @@
     <ClCompile Include="..\blocks\OSC\src\ip\win32\UdpSocket.cpp" />
     <ClCompile Include="..\src\Controller.cpp" />
     <ClCompile Include="..\src\GlowCube.cpp" />
+    <ClCompile Include="..\src\HeadCam.cpp" />
     <ClCompile Include="..\src\Moth.cpp" />
     <ClCompile Include="..\src\Particle.cpp" />
     <ClCompile Include="..\src\Room.cpp" />
     <ClCompile Include="..\src\Shockwave.cpp" />
     <ClCompile Include="..\src\Smoke.cpp" />
-    <ClCompile Include="..\src\SpringCam.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\include\Bubble.h" />
@@ -158,7 +158,6 @@
     <ClInclude Include="..\include\Room.h" />
     <ClInclude Include="..\include\Shockwave.h" />
     <ClInclude Include="..\include\Smoke.h" />
-    <ClInclude Include="..\include\SpringCam.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

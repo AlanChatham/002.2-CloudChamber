@@ -128,6 +128,7 @@ void BubbleChamberApp::checkOSCMessage(const osc::Message * message){
 
 		setCameras(Vec3f(headX, headY, headZ), false);
 	}
+}
 
 void BubbleChamberApp::prepareSettings( Settings *settings )
 {
@@ -138,7 +139,17 @@ void BubbleChamberApp::prepareSettings( Settings *settings )
 void BubbleChamberApp::setup()
 {
 	// CAMERA	
-	mActiveCam		= HeadCam( -450.0f, getWindowAspectRatio() );
+	//mActiveCam		= HeadCam( -450.0f, getWindowAspectRatio() );
+
+	// Setup the camera for the main window
+	mHeadCam0 = HeadCam( 1210.0f, getWindowAspectRatio() );
+	mHeadCam0.mEye = Vec3f(-1200,0,1200);
+	mHeadCam0.mEye.y = 0;
+	mHeadCam0.mCenter = Vec3f(0,0, 0 );
+
+	mHeadCam1 = HeadCam( 1200.0f, getWindowAspectRatio() );
+	mHeadCam1.mEye = Vec3f(-1210,0,0);
+	mHeadCam1.mCenter = Vec3f(0, 0, 0 );
 
 	// LOAD SHADERS
 	try {
@@ -166,7 +177,7 @@ void BubbleChamberApp::setup()
 	mRoomFbo			= gl::Fbo( APP_WIDTH/ROOM_FBO_RES, APP_HEIGHT/ROOM_FBO_RES, roomFormat );
 	bool isPowerOn		= true;
 	bool isGravityOn	= true;
-	mRoom				= Room( Vec3f( 350.0f, 200.0f, 350.0f ), isPowerOn, isGravityOn );	
+	mRoom				= Room( Vec3f( ROOM_WIDTH / 2, ROOM_HEIGHT / 2, ROOM_DEPTH / 2 ), isPowerOn, isGravityOn );		
 	mRoom.init();
 	
 	// MOUSE
@@ -233,6 +244,21 @@ void BubbleChamberApp::keyDown( KeyEvent event )
 		case KeyEvent::KEY_RIGHT:	mActiveCam.resetEye();								break;
 		default: break;
 	}
+
+	switch( event.getCode() ){
+		//case KeyEvent::KEY_UP:		mMouseRightPos = Vec2f( 222.0f, 205.0f ) + getWindowCenter();	break;
+		case KeyEvent::KEY_UP:		setCameras(Vec3f(mHeadCam0.mEye.x, mHeadCam0.mEye.y, mHeadCam0.mEye.z - 100), true);
+									break;
+		//case KeyEvent::KEY_LEFT:	mMouseRightPos = Vec2f(-128.0f,-178.0f ) + getWindowCenter();	break;
+		case KeyEvent::KEY_LEFT:	setCameras(Vec3f(mHeadCam0.mEye.x - 100, mHeadCam0.mEye.y, mHeadCam0.mEye.z), true);
+									break;
+			//case KeyEvent::KEY_RIGHT:	mMouseRightPos = Vec2f(-256.0f, 122.0f ) + getWindowCenter();	break;
+		case KeyEvent::KEY_RIGHT:	setCameras(Vec3f(mHeadCam0.mEye.x + 100, mHeadCam0.mEye.y, mHeadCam0.mEye.z), true);	break;
+		//case KeyEvent::KEY_DOWN:	mMouseRightPos = Vec2f(   0.0f,   0.0f ) + getWindowCenter();	break;
+		case KeyEvent::KEY_DOWN:	setCameras(Vec3f(mHeadCam0.mEye.x, mHeadCam0.mEye.y, mHeadCam0.mEye.z + 100), true);
+									break;
+		default: break;
+	}
 }
 
 void BubbleChamberApp::update()
@@ -241,14 +267,26 @@ void BubbleChamberApp::update()
 	mRoom.update();
 	
 	// CAMERA
-	if( mMousePressed )
-		mActiveCam.dragCam( ( mMouseOffset ) * 0.02f, ( mMouseOffset ).length() * 0.02 );
-	mActiveCam.update( 0.3f );
+	Vec3f topLeft = Vec3f(-ROOM_WIDTH/2, ROOM_HEIGHT/2, ROOM_DEPTH/2);
+	Vec3f bottomLeft = Vec3f(-ROOM_WIDTH/2, -ROOM_HEIGHT/2, ROOM_DEPTH/2);
+	Vec3f bottomRight = Vec3f(ROOM_WIDTH/2, -ROOM_HEIGHT/2, ROOM_DEPTH/2);
+
+	mHeadCam0.update(topLeft, bottomLeft, bottomRight, 10000);
+
+	console() << "cam0 position" << mHeadCam0.mEye << std::endl;
+	// Now update Camera 1
+
+	topLeft = Vec3f(-ROOM_WIDTH/2, ROOM_HEIGHT/2, -ROOM_DEPTH/2);
+	bottomLeft = Vec3f(-ROOM_WIDTH/2, -ROOM_HEIGHT/2, -ROOM_DEPTH/2);
+	bottomRight = Vec3f(-ROOM_WIDTH/2, -ROOM_HEIGHT/2, ROOM_DEPTH/2);
+
+	mHeadCam1.update(topLeft, bottomLeft, bottomRight, 10000);
+	
+	console() << "cam1 position" << mHeadCam1.mEye << std::endl;
+
 
 	// CONTROLLER
 	mController.update();
-
-	drawIntoRoomFbo();
 }
 
 void BubbleChamberApp::drawIntoRoomFbo()
@@ -283,17 +321,17 @@ void BubbleChamberApp::drawIntoRoomFbo()
 
 void BubbleChamberApp::draw()
 {
-		Area mViewArea0 = Area(0, 0, getWindowSize().x / 2,getWindowSize().y);
+	Area mViewArea0 = Area(0, 0, getWindowSize().x / 2,getWindowSize().y);
 	Area mViewArea1 = Area(getWindowSize().x / 2, 0, getWindowSize().x, getWindowSize().y);
 
 	gl::clear( ColorA( 0.1f, 0.1f, 0.1f, 0.0f ), true );
 
 	
 
-	mActiveCam = mActiveCam1;
+	mActiveCam = mHeadCam1;
 	drawGuts(mViewArea0);
 
-	mActiveCam = mActiveCam0;
+	mActiveCam = mHeadCam0;
 	drawGuts(mViewArea1);
 }
 
@@ -302,10 +340,11 @@ void BubbleChamberApp::drawGuts(Area area)
 	float power = mRoom.getPower();
 	Color powerColor = Color( power, power, power );
 	
-	gl::clear( ColorA( 0.1f, 0.1f, 0.1f, 0.0f ), true );
+	drawIntoRoomFbo();
 	
 	gl::setMatricesWindow( getWindowSize(), false );
-	gl::setViewport( getWindowBounds() );
+	//gl::setViewport( getWindowBounds() );
+	gl::setViewport( area );
 
 	gl::disableDepthRead();
 	gl::disableDepthWrite();
@@ -317,10 +356,18 @@ void BubbleChamberApp::drawGuts(Area area)
 	mRoomFbo.bindTexture();
 	gl::drawSolidRect( getWindowBounds() );
 	
-	gl::setMatrices( mActiveCam.getCam() );
 	
+	//mActiveCam.setFixedPipeline();
 	// PANEL
 	drawInfoPanel();
+
+	gl::pushMatrices();
+	gl::setMatrices( mActiveCam.getCam() );
+
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity(); // zero it out
+	glMultMatrixf(mActiveCam.mProjectionMatrix); // Apply the matrix to the loaded projection matrix
+	glMatrixMode(GL_MODELVIEW); // Return to our modelview matrix
 	
 	gl::disable( GL_TEXTURE_2D );
 	gl::enableDepthWrite();
@@ -370,6 +417,8 @@ void BubbleChamberApp::drawGuts(Area area)
 //		writeImage( getHomeDirectory() + "BubbleChamber/" + toString( mNumSaveFrames ) + ".png", copyWindowSurface() );
 		mNumSaveFrames ++;
 	}
+	
+	gl::popMatrices();
 }
 
 void BubbleChamberApp::drawInfoPanel()
