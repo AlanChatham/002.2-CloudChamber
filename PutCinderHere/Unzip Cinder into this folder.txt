@@ -1,0 +1,20 @@
+Download Cinder for VS2012 here:
+http://libcinder.org/releases/cinder_0.8.5_vc2012.zip
+
+Then unzip it into this directory. 
+
+Alternately, you can move the cinder folder (cinder_0.8.5_vc2012)
+into the folder that holds this program, in case you're downloading
+a bunch of the Laboratory Cinder code, so you don't have multiple
+copies running around everywhere. So, you'd have a directory
+
+LaboratoryArt (or something)
+
+that would have these directories
+
+LaboratoryArt/004-deltaT/
+LaboratoryArt/cinder_0.8.5_vc2012/
+
+and that should compile nicely as well.
+Remember, you'll need Visual Studio 2012 (NOT 2013!!!) to get
+these to compile
